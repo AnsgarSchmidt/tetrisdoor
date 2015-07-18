@@ -1,17 +1,13 @@
 #include "application.h"
-#include "neopixel/neopixel.h"
-#include "MQTT/MQTT.h"
-
-#include "application.h"
+#include "neopixel__spark_internet_button/neopixel__spark_internet_button.h"
 
 #define PIXEL_PIN      D0
 #define PIXEL_TYPE     WS2811
+#define matrixx         5
+#define matrixy        10
+#define fallspeedorg   80
 
-#define matrixx        10
-#define matrixy         5
-#define fallspeedorg  800
-
-int pos[2]                   = { 5, 1};
+int pos[2]                   = { 3, 1};
 int bricks[7][4][2]          = { {{0, 1}, {-1, 0}, {0, 0}, {1, 0}}, {{-1, 1}, {-1, 0}, {0, 0}, {1, 0}}, {{1, 1}, {-1, 0}, {0, 0}, {1, 0}}, {{-1, 0}, {0, 0}, {0, 1}, {1, 1}}, {{-1, 1}, {0, 1}, {0, 0}, {1, 0}}, {{1, 0}, {1, 1}, {0, 1}, {0, 0}}, {{-1, 0}, {0, 0}, {1, 0}, {2, 0}}};
 int colors[7][3]             = { {255, 0, 0}, {100, 255, 0}, {0, 0, 255}, {255, 255, 0}, {0, 255, 255}, {255, 100, 0}, {255, 255, 255}};
 int matrix[matrixx][matrixy] = { 0};
@@ -26,56 +22,15 @@ int moveable                 = 0;
 int fullrow                  = 0;
 int rowtodelete              = 0;
 int gameover                 = 0;
-int mode                     = 0;
+int mode                     = 1;
 int currentColor[3]          = {0};
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel((matrixx * matrixy), PIXEL_PIN, PIXEL_TYPE);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel( (matrixx * matrixy) , PIXEL_PIN, PIXEL_TYPE);
 
-void callback(char* topic, byte* payload, unsigned int length);
-
-MQTT client("ansinas", 1883, callback);
-
-void callback(char* topic, byte* payload, unsigned int length) {
-    char p[length + 1];
-    memcpy(p, payload, length);
-    p[length] = NULL;
-    String message(p);
-
-    if (message.equals("LEFT")){
-        left();
-    }
-
-    if (message.equals("RIGHT")){
-        right();
-    }
-
-    if (message.equals("DOWN")){
-        down();
-    }
-
-    if (message.equals("ROTATE")){
-        rotate();
-    }
-
-}
-
-void setup() {
-    
-    strip.begin();
-
-    for(int i = 0; i < strip.numPixels(); i++){
-        strip.setPixelColor(i, strip.Color(1, 0, 0));
-    }
-
-    strip.show();
-    
-    client.connect("tetrisdoor");
-
-    if (client.isConnected()) {
-        client.publish("tetrisdoor","start");
-        client.subscribe("tetrisdoor");
-    }
-
+void setup() 
+{
+  strip.begin();
+  strip.show(); // Initialize all pixels to 'off'
 }
 
 void checkend(){
@@ -92,7 +47,7 @@ void checkend(){
   
   if(gameover == 1){
   
-    pos[0] = 5;
+    pos[0] = 3;
     pos[1] = 1;
   
     for(int x = 0; x < matrixx; x++){
@@ -288,7 +243,8 @@ void show(){
     }
   
   }
-  
+
+/*  
   for(int e = 0; e < 4; e++){
     truepos[0] = current[e][0]+pos[0];
     truepos[1] = current[e][1]+pos[1];
@@ -300,23 +256,23 @@ void show(){
     }
     
   }
-  
+  */
   strip.show();
 }
 
 void loop() {
     
-    if (client.isConnected()){
-        client.loop();
+    if(mode == 0){
+      for(int x = 0; x < matrixx; x++){
+        for(int y = 0; y < matrixy; y ++){
+            matrix[x][y] = 0;
+        }
+      }
+      matrix[1][1] = 1;
+      show();
     }
     
-    if(mode == 0){
-        
-          for(int i = 0; i < strip.numPixels(); i++){
-            strip.setPixelColor(i, strip.Color(currentColor[0], currentColor[1], currentColor[2]));
-          }
-          
-    }
+    
     
     if(mode == 1){
         if(fallcount == fallspeed){
@@ -328,6 +284,6 @@ void loop() {
         checkrows();
         checkend();
         show();
-        delay(100);
+        delay(1);
     }
 }
