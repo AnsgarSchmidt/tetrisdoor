@@ -5,14 +5,19 @@
 #define PIXEL_TYPE     WS2811
 #define matrixx         5
 #define matrixy        10
-#define fallspeedorg   80
+#define fallspeedorg  100
 
-int pos[2]                   = { 3, 1};
-int bricks[7][4][2]          = { {{0, 1}, {-1, 0}, {0, 0}, {1, 0}}, {{-1, 1}, {-1, 0}, {0, 0}, {1, 0}}, {{1, 1}, {-1, 0}, {0, 0}, {1, 0}}, {{-1, 0}, {0, 0}, {0, 1}, {1, 1}}, {{-1, 1}, {0, 1}, {0, 0}, {1, 0}}, {{1, 0}, {1, 1}, {0, 1}, {0, 0}}, {{-1, 0}, {0, 0}, {1, 0}, {2, 0}}};
+int pos[2]                   = { matrixx-3, matrixy};
+int bricks[7][4][2]          = { {{ 0,-1}, {-1, 0}, {0, 0}, {1, 0}},  // 0
+                                 {{-1,-1}, {-1, 0}, {0, 0}, {1, 0}},  // 1
+                                 {{ 1,-1}, {-1, 0}, {0, 0}, {1, 0}},  // 2
+                                 {{-1, 0}, { 0, 0}, {0,-1}, {1,-1}},  // 3
+                                 {{-1,-1}, { 0,-1}, {0, 0}, {1, 0}},  // 4
+                                 {{ 1, 0}, { 1,-1}, {0,-1}, {0, 0}},  // 5
+                                 {{-1, 0}, { 0, 0}, {1, 0}, {2, 0}}}; // 6
 int colors[7][3]             = { {255, 0, 0}, {100, 255, 0}, {0, 0, 255}, {255, 255, 0}, {0, 255, 255}, {255, 100, 0}, {255, 255, 255}};
 int matrix[matrixx][matrixy] = { 0};
-int leds[matrixx * matrixy]  = { 0};
-int current[4][2]            = { {1, 1}, {-1, 0}, {0, 0}, {1, 0} };
+int current[4][2]            = {  {-1,-1}, {-1, 0}, {0, 0}, {1, 0} };
 int currentcach[4][2]        = { 0};
 int currentnum               = 1;
 int truepos[2]               = { 0,0};
@@ -39,7 +44,7 @@ void checkend(){
   
   for(int x = 0; x < matrixx; x++){
 
-    if(matrix[x][1] != 0){
+    if(matrix[x][matrixy-1] != 0){
       gameover = 1;
     }
 
@@ -47,8 +52,8 @@ void checkend(){
   
   if(gameover == 1){
   
-    pos[0] = 3;
-    pos[1] = 1;
+    pos[0] = matrixx-3;
+    pos[1] = matrixy;
   
     for(int x = 0; x < matrixx; x++){
 
@@ -60,7 +65,6 @@ void checkend(){
     
     add(random(7));
     
-    // ????????????????????????????????
     for(int x = 0; x < matrixx; x++){
 
       for(int y = 0; y< matrixy; y++){
@@ -68,8 +72,7 @@ void checkend(){
       }
 
     }
-    // ?????????????????????????????????
-    
+
   }
   
 }
@@ -89,12 +92,16 @@ void checkrows(){
     
     if(fullrow == 1){
 
-      for(int row = y; row > 0; row--){
+      for(int row = y; row < matrixy-1; row++){
 
         for(int x = 0; x < matrixx; x++){
-          matrix[x][row] = matrix[x][row-1];
+          matrix[x][row] = matrix[x][row+1];
         }
 
+      }
+
+      for(int x = 0; x < matrixx; x++){
+        matrix[x][matrixy-1] = 0;
       }
 
     }
@@ -105,41 +112,68 @@ void checkrows(){
 
 void down(){
   moveable = 1;
+
   for(int e = 0; e < 4; e++){
 
-    if(matrix[current[e][0]+pos[0]][current[e][1]+pos[1]+1] != 0){
-      moveable = 0;
+    if(current[e][0] + pos[0] < 0 ){
+        moveable = 0;
     }
 
-    if(current[e][1]+pos[1]+1 == 35){
+    if(current[e][0] + pos[0] >= matrixx ){
+        moveable = 0;
+    }
+
+    if((current[e][1] + pos[1] - 1) < 0 ){
+        moveable = 0;
+    }
+
+    if((current[e][1] + pos[1] - 1) >= matrixy ){
+        moveable = 0;
+   } 
+
+    if(moveable && (matrix[current[e][0] + pos[0]][current[e][1] + pos[1] - 1] != 0)) {
       moveable = 0;
     }
 
   }
   
-  if(moveable == 1){
-    pos[1]++;
+  if(moveable){
+    pos[1]--;
   }else{
     add(random(7));
   }
+
 }
 
 void right(){
+    
   moveable = 1;
   
   for(int e = 0; e < 4; e++){
 
-    if(matrix[current[e][0]+pos[0]+1][current[e][1]+pos[1]] != 0){
-      moveable = 0;
+    if((current[e][0] + pos[0] + 1) < 0 ){
+        moveable = 0;
     }
 
-    if(current[e][0]+pos[0]+1 == matrixx){
+    if((current[e][0] + pos[0] + 1) >= matrixx ){
+        moveable = 0;
+    }
+
+    if(current[e][1] + pos[1] < 0 ){
+        moveable = 0;
+    }
+
+    if(current[e][1] + pos[1] >= matrixy ){
+        moveable = 0;
+   } 
+
+    if(moveable && matrix[current[e][0]+pos[0] + 1][current[e][1]+pos[1]] != 0){
       moveable = 0;
     }
 
   }
   
-  if(moveable == 1){
+  if(moveable){
     pos[0]++;
   }
 }
@@ -149,17 +183,30 @@ void left(){
   
   for(int e = 0; e < 4; e++){
 
-    if(matrix[current[e][0]+pos[0]-1][current[e][1]+pos[1]] != 0){
-      moveable = 0;
+    if((current[e][0] + pos[0] - 1) < 0 ){
+        moveable = 0;
     }
 
-    if(current[e][0]+pos[0]-1 == -1){
+    if((current[e][0] + pos[0] - 1) >= matrixx ){
+        moveable = 0;
+    }
+
+    if(current[e][1] + pos[1] < 0 ){
+        moveable = 0;
+    }
+
+    if(current[e][1] + pos[1] >= matrixy ){
+        moveable = 0;
+   } 
+
+
+    if(moveable && matrix[current[e][0]+pos[0] - 1][current[e][1]+pos[1]] != 0){
       moveable = 0;
     }
 
   }
   
-  if(moveable == 1){
+  if(moveable){
     pos[0]--;
   }
 
@@ -181,15 +228,23 @@ void rotate(){
   
   for(int e = 0; e < 4; e++){
 
-    if(matrix[current[e][0]+pos[0]][current[e][1]+pos[1]] != 0){
-      moveable = 0;
+    if(current[e][0] + pos[0] < 0 ){
+        moveable = 0;
     }
 
-    if(current[e][0]+pos[0] < 0){
-      moveable = 0;
+    if(current[e][0] + pos[0] >= matrixx ){
+        moveable = 0;
     }
 
-    if(current[e][0]+pos[0] > 9){
+    if(current[e][1] + pos[1] < 0 ){
+        moveable = 0;
+    }
+
+    if(current[e][1] + pos[1] >= matrixy ){
+        moveable = 0;
+   } 
+
+    if(moveable && matrix[current[e][0]+pos[0]][current[e][1]+pos[1]] != 0){
       moveable = 0;
     }
 
@@ -215,8 +270,9 @@ void add(int b){
   }
 
   currentnum = b;
-  pos[0] = 5;
-  pos[1] = 1;
+  
+  pos[0] = matrixx-3;
+  pos[1] = matrixy;
 
 }
 
@@ -226,16 +282,16 @@ void show(){
     strip.setPixelColor(i, strip.Color(0, 0, 0));
   }
 
-  for(int x = 0; x < matrixx; x++){
+  for(int y = 0; y < matrixy; y++){
 
-    for(int y = 0; y < matrixy; y ++){
+    for(int x = 0; x < matrixx; x ++){
 
       if(matrix[x][y] != 0){
 
-        if(x%2 == 1){
-          strip.setPixelColor((x*matrixy)+y,             strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
+        if(y%2 == 0){
+          strip.setPixelColor((y*matrixx)+x,             strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
         }else{
-          strip.setPixelColor((x*matrixy)+(matrixy-y-1), strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
+          strip.setPixelColor((y*matrixx)+(matrixx-x-1), strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
         }
     
       }
@@ -244,19 +300,19 @@ void show(){
   
   }
 
-/*  
+  
   for(int e = 0; e < 4; e++){
     truepos[0] = current[e][0]+pos[0];
     truepos[1] = current[e][1]+pos[1];
   
-    if(truepos[0]%2 == 1){
-      strip.setPixelColor((truepos[0]*matrixy)+truepos[1],             strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
+    if(truepos[1]%2 == 0){
+      strip.setPixelColor((truepos[1]*matrixx)+truepos[0],             strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
     }else{
-      strip.setPixelColor((truepos[0]*matrixy)+(matrixy-truepos[1]-1), strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
+      strip.setPixelColor((truepos[1]*matrixx)+(matrixx-truepos[0]-1), strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
     }
     
   }
-  */
+  
   strip.show();
 }
 
@@ -266,9 +322,11 @@ void loop() {
       for(int x = 0; x < matrixx; x++){
         for(int y = 0; y < matrixy; y ++){
             matrix[x][y] = 0;
-        }
+        }  
       }
-      matrix[1][1] = 1;
+      
+      
+      matrix[4][2] = 1;
       show();
     }
     
