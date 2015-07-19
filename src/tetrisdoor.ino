@@ -3,75 +3,42 @@
 // http://mclien.de/files/tuertris/tuertris_sw.zip
 // Joel Lienhard  (joel@mclien.de  joel@sisam42.de)
 
-
 #include "application.h"
 #include "neopixel__spark_internet_button/neopixel__spark_internet_button.h"
 
-#define PIXEL_PIN      D0
-#define MODE_PIN       D1
-#define LEFT           D2
-#define RIGHT          D3
-#define DOWN           D4
-#define ROTATE         D5
+#include "tetrisDoor.h"
+#include "gameOfLife.h"
+#include "spock.h"
+#include "tetris.h"
+#include "fire.h"
 
-#define MAX_MODE        2
-
-#define PIXEL_TYPE     WS2811
-#define matrixx         5
-#define matrixy        10
-#define fallspeedorg  100
-#define debouncevalue 100
-
-int pos[2]                   = { matrixx-3, matrixy};
-int bricks[7][4][2]          = { {{ 0,-1}, {-1, 0}, {0, 0}, {1, 0}},  // 0
-                                 {{-1,-1}, {-1, 0}, {0, 0}, {1, 0}},  // 1
-                                 {{ 1,-1}, {-1, 0}, {0, 0}, {1, 0}},  // 2
-                                 {{-1, 0}, { 0, 0}, {0,-1}, {1,-1}},  // 3
-                                 {{-1,-1}, { 0,-1}, {0, 0}, {1, 0}},  // 4
-                                 {{ 1, 0}, { 1,-1}, {0,-1}, {0, 0}},  // 5
-                                 {{-1, 0}, { 0, 0}, {1, 0}, {2, 0}}}; // 6
-int colors[7][3]             = { {255, 0, 0}, {100, 255, 0}, {0, 0, 255}, {255, 255, 0}, {0, 255, 255}, {255, 100, 0}, {255, 255, 255}};
-int matrix[matrixx][matrixy] = { 0};
-int current[4][2]            = {  {-1,-1}, {-1, 0}, {0, 0}, {1, 0} };
-int currentcach[4][2]        = { 0};
-int currentnum               = 1;
-int truepos[2]               = { 0,0};
-int fallspeed                = fallspeedorg;
-int fallcount                = 0;
-int moveable                 = 0;
-int fullrow                  = 0;
-int rowtodelete              = 0;
-int gameover                 = 0;
-int mode                     = 0;
-int debounce                 = 0;
-int currentColor[3]          = {0};
-
-Adafruit_NeoPixel strip = Adafruit_NeoPixel( (matrixx * matrixy) , PIXEL_PIN, PIXEL_TYPE);
+Adafruit_NeoPixel strip = Adafruit_NeoPixel( (MATRIX_X * MATRIX_Y) , PIN_PIXEL, PIXEL_TYPE);
 
 void setup() 
 {
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
   
-  pinMode(ROTATE,       INPUT);
-  pinMode(DOWN,         INPUT);
-  pinMode(LEFT,         INPUT);
-  pinMode(RIGHT,        INPUT);
-  pinMode(MODE_PIN,     INPUT);
-  digitalWrite(ROTATE,  HIGH);
-  digitalWrite(DOWN,    HIGH);
-  digitalWrite(LEFT,    HIGH);
-  digitalWrite(RIGHT,   HIGH);
-  digitalWrite(MODE_PIN, HIGH);
+  pinMode(PIN_UP,         INPUT);
+  pinMode(PIN_DOWN,       INPUT);
+  pinMode(PIN_LEFT,       INPUT);
+  pinMode(PIN_RIGHT,      INPUT);
+  pinMode(PIN_MODE,       INPUT);
+  
+  digitalWrite(PIN_UP,    HIGH);
+  digitalWrite(PIN_DOWN,  HIGH);
+  digitalWrite(PIN_LEFT,  HIGH);
+  digitalWrite(PIN_RIGHT, HIGH);
+  digitalWrite(PIN_MODE,  HIGH);
 }
 
 void checkend(){
   
   gameover = 0;
   
-  for(int x = 0; x < matrixx; x++){
+  for(int x = 0; x < MATRIX_X; x++){
 
-    if(matrix[x][matrixy-1] != 0){
+    if(matrix[x][MATRIX_Y - 1] != 0){
       gameover = 1;
     }
 
@@ -79,12 +46,12 @@ void checkend(){
   
   if(gameover == 1){
   
-    pos[0] = matrixx-3;
-    pos[1] = matrixy;
+    pos[0] = MATRIX_X-3;
+    pos[1] = MATRIX_Y;
   
-    for(int x = 0; x < matrixx; x++){
+    for(int x = 0; x < MATRIX_X; x++){
 
-      for(int y = 0; y < matrixy; y++){
+      for(int y = 0; y < MATRIX_Y; y++){
         matrix[x][y] = 0;
       }
 
@@ -92,9 +59,9 @@ void checkend(){
     
     add(random(7));
     
-    for(int x = 0; x < matrixx; x++){
+    for(int x = 0; x < MATRIX_X; x++){
 
-      for(int y = 0; y< matrixy; y++){
+      for(int y = 0; y< MATRIX_Y; y++){
         matrix[x][y] = 0;
       }
 
@@ -106,10 +73,10 @@ void checkend(){
 
 void checkrows(){
   
-  for(int y = 0; y < matrixy; y++){
+  for(int y = 0; y < MATRIX_Y; y++){
     fullrow = 1;
     
-    for(int x = 0; x < matrixx; x++){
+    for(int x = 0; x < MATRIX_X; x++){
 
       if(matrix[x][y] == 0){
         fullrow = 0;
@@ -119,16 +86,16 @@ void checkrows(){
     
     if(fullrow == 1){
 
-      for(int row = y; row < matrixy-1; row++){
+      for(int row = y; row < MATRIX_Y-1; row++){
 
-        for(int x = 0; x < matrixx; x++){
+        for(int x = 0; x < MATRIX_X; x++){
           matrix[x][row] = matrix[x][row+1];
         }
 
       }
 
-      for(int x = 0; x < matrixx; x++){
-        matrix[x][matrixy-1] = 0;
+      for(int x = 0; x < MATRIX_X; x++){
+        matrix[x][MATRIX_Y-1] = 0;
       }
 
     }
@@ -146,7 +113,7 @@ void down(){
         moveable = 0;
     }
 
-    if(current[e][0] + pos[0] >= matrixx ){
+    if(current[e][0] + pos[0] >= MATRIX_X ){
         moveable = 0;
     }
 
@@ -154,7 +121,7 @@ void down(){
         moveable = 0;
     }
 
-    if((current[e][1] + pos[1] - 1) >= matrixy ){
+    if((current[e][1] + pos[1] - 1) >= MATRIX_Y ){
         moveable = 0;
    } 
 
@@ -182,7 +149,7 @@ void right(){
         moveable = 0;
     }
 
-    if((current[e][0] + pos[0] + 1) >= matrixx ){
+    if((current[e][0] + pos[0] + 1) >= MATRIX_X ){
         moveable = 0;
     }
 
@@ -190,7 +157,7 @@ void right(){
         moveable = 0;
     }
 
-    if(current[e][1] + pos[1] >= matrixy ){
+    if(current[e][1] + pos[1] >= MATRIX_Y ){
         moveable = 0;
    } 
 
@@ -214,7 +181,7 @@ void left(){
         moveable = 0;
     }
 
-    if((current[e][0] + pos[0] - 1) >= matrixx ){
+    if((current[e][0] + pos[0] - 1) >= MATRIX_X ){
         moveable = 0;
     }
 
@@ -222,7 +189,7 @@ void left(){
         moveable = 0;
     }
 
-    if(current[e][1] + pos[1] >= matrixy ){
+    if(current[e][1] + pos[1] >= MATRIX_Y ){
         moveable = 0;
    } 
 
@@ -259,7 +226,7 @@ void rotate(){
         moveable = 0;
     }
 
-    if(current[e][0] + pos[0] >= matrixx ){
+    if(current[e][0] + pos[0] >= MATRIX_X ){
         moveable = 0;
     }
 
@@ -267,7 +234,7 @@ void rotate(){
         moveable = 0;
     }
 
-    if(current[e][1] + pos[1] >= matrixy ){
+    if(current[e][1] + pos[1] >= MATRIX_Y ){
         moveable = 0;
    } 
 
@@ -298,8 +265,8 @@ void add(int b){
 
   currentnum = b;
   
-  pos[0] = matrixx-3;
-  pos[1] = matrixy;
+  pos[0] = MATRIX_X-3;
+  pos[1] = MATRIX_Y;
 
 }
 
@@ -309,16 +276,16 @@ void show(bool tetris){
     strip.setPixelColor(i, strip.Color(0, 0, 0));
   }
 
-  for(int y = 0; y < matrixy; y++){
+  for(int y = 0; y < MATRIX_Y; y++){
 
-    for(int x = 0; x < matrixx; x ++){
+    for(int x = 0; x < MATRIX_X; x ++){
 
       if(matrix[x][y] != 0){
 
         if(y%2 == 0){
-          strip.setPixelColor((y*matrixx)+x,             strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
+          strip.setPixelColor((y*MATRIX_X)+x,              strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
         }else{
-          strip.setPixelColor((y*matrixx)+(matrixx-x-1), strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
+          strip.setPixelColor((y*MATRIX_X)+(MATRIX_X-x-1), strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
         }
     
       }
@@ -334,9 +301,9 @@ void show(bool tetris){
         truepos[1] = current[e][1]+pos[1];
       
         if(truepos[1]%2 == 0){
-          strip.setPixelColor((truepos[1]*matrixx)+truepos[0],             strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
+          strip.setPixelColor((truepos[1]*MATRIX_X)+truepos[0],              strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
         }else{
-          strip.setPixelColor((truepos[1]*matrixx)+(matrixx-truepos[0]-1), strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
+          strip.setPixelColor((truepos[1]*MATRIX_X)+(MATRIX_X-truepos[0]-1), strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
         }
         
       }
@@ -348,18 +315,18 @@ void show(bool tetris){
 
 void loop() {
     
-    if(digitalRead(MODE_PIN) == LOW and debounce == 0){
-      debounce = debouncevalue;
-      mode++;
+    if(digitalRead(PIN_MODE) == LOW and debounce == 0){
+      debounce = DEBOUNCE_VALUE;
+      //mode++;
       if (mode > MAX_MODE){
-          mode = 0;
+          mode = OFF;
       }
     }
 
     // RANDOM SPOCK Pattern
-    if(mode == 0){
-      for(int x = 0; x < matrixx; x++){
-        for(int y = 0; y < matrixy; y ++){
+    if(mode == SPOCK){
+      for(int x = 0; x < MATRIX_X; x++){
+        for(int y = 0; y < MATRIX_Y; y ++){
             matrix[x][y] = 0;
         }  
       }
@@ -369,29 +336,29 @@ void loop() {
     }
     
     // Tetris
-    if(mode == 1){
+    if(mode == TETRIS){
         if(fallcount == fallspeed){
             fallcount = 0;
             down();
         }
         
-        if(digitalRead(DOWN) == LOW and debounce == 0){
-          debounce = debouncevalue;
+        if(digitalRead(PIN_DOWN) == LOW and debounce == 0){
+          debounce = DEBOUNCE_VALUE;
           down();
         }
 
-        if(digitalRead(RIGHT) == LOW and debounce == 0){
-          debounce = debouncevalue;
+        if(digitalRead(PIN_RIGHT) == LOW and debounce == 0){
+          debounce = DEBOUNCE_VALUE;
           right();
         }
         
-        if(digitalRead(LEFT) == LOW and debounce == 0){
-          debounce = debouncevalue;
+        if(digitalRead(PIN_LEFT) == LOW and debounce == 0){
+          debounce = DEBOUNCE_VALUE;
           left();
         }
         
-        if(digitalRead(ROTATE) == LOW and debounce == 0){
-          debounce = debouncevalue; 
+        if(digitalRead(PIN_UP) == LOW and debounce == 0){
+          debounce = DEBOUNCE_VALUE; 
           rotate();
         }
        
