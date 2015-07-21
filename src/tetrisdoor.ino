@@ -4,7 +4,7 @@
 // Joel Lienhard  (joel@mclien.de  joel@sisam42.de)
 
 #include "application.h"
-#include "neopixel__spark_internet_button/neopixel__spark_internet_button.h"
+#include "neopixel__spark_internet_button.h"
 
 #include "tetrisDoor.h"
 #include "gameOfLife.h"
@@ -12,7 +12,7 @@
 #include "tetris.h"
 #include "fire.h"
 
-Adafruit_NeoPixel strip = Adafruit_NeoPixel( (MATRIX_X * MATRIX_Y) , PIN_PIXEL, PIXEL_TYPE);
+static Adafruit_NeoPixel strip = Adafruit_NeoPixel( (MATRIX_X * MATRIX_Y) , PIN_PIXEL, PIXEL_TYPE);
 
 void setup() 
 {
@@ -270,69 +270,51 @@ void add(int b){
 
 }
 
-void show(bool tetris){
-
-  for(int i = 0; i < strip.numPixels(); i++){
-    strip.setPixelColor(i, strip.Color(0, 0, 0));
-  }
-
-  for(int y = 0; y < MATRIX_Y; y++){
-
-    for(int x = 0; x < MATRIX_X; x ++){
-
-      if(matrix[x][y] != 0){
-
-        if(y%2 == 0){
-          strip.setPixelColor((y*MATRIX_X)+x,              strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
-        }else{
-          strip.setPixelColor((y*MATRIX_X)+(MATRIX_X-x-1), strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
-        }
-    
-      }
-    
-    }
-  
-  }
-
-  if (tetris) {
-  
-      for(int e = 0; e < 4; e++){
-        truepos[0] = current[e][0]+pos[0];
-        truepos[1] = current[e][1]+pos[1];
-      
-        if(truepos[1]%2 == 0){
-          strip.setPixelColor((truepos[1]*MATRIX_X)+truepos[0],              strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
-        }else{
-          strip.setPixelColor((truepos[1]*MATRIX_X)+(MATRIX_X-truepos[0]-1), strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
-        }
-        
-      }
-  
-  }
-  
-  strip.show();
-}
-
 void loop() {
     
     if(digitalRead(PIN_MODE) == LOW and debounce == 0){
       debounce = DEBOUNCE_VALUE;
+      for(int x = 0; x < MATRIX_X; x++){
+        for(int y = 0; y < MATRIX_Y; y ++){
+            matrix[x][y] = 0;
+        }  
+      }
       //mode++;
       if (mode > MAX_MODE){
           mode = OFF;
       }
     }
 
-    // RANDOM SPOCK Pattern
-    if(mode == SPOCK){
+	// OFF
+	if(mode == OFF){
       for(int x = 0; x < MATRIX_X; x++){
         for(int y = 0; y < MATRIX_Y; y ++){
             matrix[x][y] = 0;
         }  
       }
+      show(false);		
+	}
+
+    // RANDOM SPOCK Pattern
+    if(mode == SPOCK){
+    
+      if(spockLastUpdate + SPOCK_WAIT < millis()){
       
-      matrix[4][2] = 1;
-      show(false);
+        spockLastUpdate = millis();
+
+        for(int x = 0; x < MATRIX_X; x++){
+          for(int y = 0; y < MATRIX_Y; y++){
+            matrix[x][y] = 0;
+          }  
+        }
+        
+        for(int n = 0; n < SPOCK_NUMBER_OF_LEDS; n++){
+        	matrix[random(MATRIX_X)][random(MATRIX_Y)] = random(7);
+        }
+      }
+      
+      show(false);      
+          
     }
     
     // Tetris
@@ -370,12 +352,69 @@ void loop() {
     }
     
     // Game of life
-    if(mode == 2){
+    if(mode == GAME_OF_LIFE){
+        for(int x = 0; x < MATRIX_X; x++){
+          for(int y = 0; y < MATRIX_Y; y++){
+            matrix[x][y] = 0;
+          }  
+        }
         
+        matrix[2][3] = 2;
+        matrix[3][2] = 4;
+        
+        show(false);        
     }
+    
+    // fire
+    if(mode == FIRE){
+        
+    }    
     
     if(debounce != 0){
       debounce--;
     }
 
+}
+
+void show(bool tetris){
+
+  for(int i = 0; i < strip.numPixels(); i++){
+    strip.setPixelColor(i, strip.Color(0, 0, 0));
+  }
+
+  for(int y = 0; y < MATRIX_Y; y++){
+
+    for(int x = 0; x < MATRIX_X; x ++){
+
+      if(matrix[x][y] != 0){
+
+        if(y%2 == 0){
+          strip.setPixelColor((y*MATRIX_X)+x,              strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
+        }else{
+          strip.setPixelColor((y*MATRIX_X)+(MATRIX_X-x-1), strip.Color( colors[matrix[x][y]-1][0], colors[matrix[x][y]-1][1], colors[matrix[x][y]-1][2]) );
+        }
+
+      }
+
+    }
+
+  }
+
+  if (tetris) {
+
+      for(int e = 0; e < 4; e++){
+        truepos[0] = current[e][0]+pos[0];
+        truepos[1] = current[e][1]+pos[1];
+
+        if(truepos[1]%2 == 0){
+          strip.setPixelColor((truepos[1]*MATRIX_X)+truepos[0],              strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
+        }else{
+          strip.setPixelColor((truepos[1]*MATRIX_X)+(MATRIX_X-truepos[0]-1), strip.Color(colors[currentnum][0], colors[currentnum][1], colors[currentnum][2]) );
+        }
+
+      }
+
+  }
+
+  strip.show();
 }

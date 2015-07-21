@@ -26,6 +26,6 @@ typedef enum {OFF,
               MAX_MODE
              } MODES_e;
         
-MODES_e mode = TETRIS;
+MODES_e mode = GAME_OF_LIFE;
 
 #endif
